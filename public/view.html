@@ -27,7 +27,7 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 40px 24px;
+      padding: 80px 24px 40px;
     }
 
     body::before {
@@ -365,9 +365,72 @@
       .stats { grid-template-columns: repeat(2, 1fr); }
       thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
     }
+
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: rgba(13,15,20,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .navbar-brand span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .navbar-right { display: flex; align-items: center; gap: 12px; }
+    .user-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px 6px 8px;
+      font-size: 13px;
+    }
+    .user-avatar {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: #fff;
+      text-transform: uppercase;
+    }
+    .logout-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px; padding: 6px 12px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .logout-btn:hover { color: #f87171; border-color: #f87171; }
   </style>
 </head>
 <body>
+
+  <nav class="navbar">
+    <div class="navbar-brand">🎓 <span>Feedback</span> Portal</div>
+    <div class="navbar-right">
+      <div class="user-pill">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <span id="userName">Loading…</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </nav>
+
   <div class="container">
     <header>
       <div class="header-left">
@@ -516,6 +579,25 @@
     }
 
     load();
+  </script>
+
+  <script>
+    // Admin-only auth guard
+    const token = localStorage.getItem('token');
+    const user  = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!token) { window.location.href = '/login.html'; }
+    else if (user && user.role !== 'admin') { window.location.href = '/'; }
+
+    if (user) {
+      document.getElementById('userName').textContent = user.name || user.email;
+      document.getElementById('userAvatar').textContent = (user.name || user.email || '?')[0].toUpperCase();
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login.html';
+    }
   </script>
 </body>
 </html>

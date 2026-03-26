@@ -306,13 +306,90 @@
       border-color: rgba(108,143,255,0.4);
     }
 
+    /* Navbar */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: rgba(13,15,20,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .navbar-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .navbar-brand span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .navbar-right {
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .user-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px 6px 8px;
+      font-size: 13px;
+    }
+
+    .user-avatar {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: #fff;
+      text-transform: uppercase;
+    }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .logout-btn:hover { color: var(--error); border-color: var(--error); }
+
+    body { padding-top: 80px; }
+
     @media (max-width: 560px) {
       .card { padding: 28px 22px; }
       h2 { font-size: 24px; }
+      .navbar { padding: 12px 16px; }
     }
   </style>
 </head>
 <body>
+
+  <nav class="navbar">
+    <div class="navbar-brand">🎓 <span>Feedback</span> Portal</div>
+    <div class="navbar-right">
+      <div class="user-pill">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <span id="userName">Loading…</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </nav>
 
   <div class="card">
     <div class="card-header">
@@ -366,12 +443,38 @@
         <span class="spinner"></span>
       </button>
     </form>
-    
+
+    <div class="divider">or</div>
+    <a href="/view.html" class="view-link" id="dashboardLink" style="display:none">📋 View All Submitted Feedback</a>
+  </div>
+
   <div class="toast" id="toast">
     <span class="toast-icon" id="toastIcon">✓</span>
     <span id="toastMsg">Feedback submitted!</span>
   </div>
 
   <script src="script.js"></script>
+  <script>
+    // Auth guard
+    const token = localStorage.getItem('token');
+    const user  = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!token) window.location.href = '/login.html';
+
+    // Populate navbar
+    if (user) {
+      document.getElementById('userName').textContent = user.name || user.email;
+      document.getElementById('userAvatar').textContent = (user.name || user.email || '?')[0].toUpperCase();
+      // Show dashboard link only for admins
+      if (user.role === 'admin') {
+        document.getElementById('dashboardLink').style.display = 'block';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login.html';
+    }
+  </script>
 </body>
 </html>

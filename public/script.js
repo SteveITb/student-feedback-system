@@ -11,7 +11,6 @@ function showToast(message, type = "success") {
   toastMsg.textContent = message;
   toastIcon.textContent = type === "success" ? "✓" : "✕";
   toast.className = `toast ${type}`;
-  // Force reflow so transition replays
   void toast.offsetWidth;
   toast.classList.add("show");
   toastTimer = setTimeout(() => toast.classList.remove("show"), 3500);
@@ -63,22 +62,31 @@ form.addEventListener("submit", async function (e) {
     return;
   }
 
-  // Loading state
   submitBtn.disabled = true;
   submitBtn.classList.add("loading");
 
   try {
+    const token = localStorage.getItem("token");
     const res = await fetch("/submit", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": "Bearer " + token } : {})
+      },
       body: JSON.stringify(data)
     });
+
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login.html";
+      return;
+    }
 
     if (!res.ok) throw new Error("Server error");
 
     showToast("Feedback submitted successfully!", "success");
     form.reset();
-    // Uncheck stars visually
     document.querySelectorAll('input[name="stars"]').forEach(r => r.checked = false);
 
   } catch (err) {
