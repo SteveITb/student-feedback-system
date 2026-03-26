@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Feedback Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #161920;
+      --surface2: #1e2230;
+      --border: #2a2f42;
+      --accent: #6c8fff;
+      --accent2: #a78bfa;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --success: #34d399;
+      --warn: #fbbf24;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      width: 600px; height: 600px;
+      background: var(--accent);
+      border-radius: 50%;
+      filter: blur(160px);
+      opacity: 0.08;
+      top: -200px; right: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 36px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .header-left .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(108,143,255,0.1);
+      border: 1px solid rgba(108,143,255,0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-left p {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 6px;
+      font-weight: 300;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: border-color 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+
+    .back-btn:hover {
+      border-color: var(--accent);
+      background: rgba(108,143,255,0.06);
+    }
+
+    /* Stats row */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+      animation: fadeUp 0.5s 0.1s ease both;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .stat-card .label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-card .value.accent {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Search/filter */
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      animation: fadeUp 0.5s 0.15s ease both;
+    }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      padding: 11px 16px 11px 40px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108,143,255,0.12);
+    }
+
+    .search-wrap::before {
+      content: '🔍';
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+    }
+
+    .filter-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      padding: 11px 36px 11px 14px;
+      outline: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      transition: border-color 0.2s;
+    }
+
+    .filter-select:focus { border-color: var(--accent); }
+    .filter-select option { background: #1e2230; }
+
+    /* Table */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      animation: fadeUp 0.5s 0.2s ease both;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      background: var(--surface2);
+      padding: 14px 18px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    tbody td {
+      padding: 16px 18px;
+      font-size: 14px;
+      vertical-align: top;
+      line-height: 1.5;
+    }
+
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+
+    .name-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stars {
+      color: #fbbf24;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    .rating-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .rating-badge.r5, .rating-badge.excellent {
+      background: rgba(52,211,153,0.12);
+      color: #34d399;
+    }
+    .rating-badge.r4, .rating-badge.good {
+      background: rgba(108,143,255,0.12);
+      color: var(--accent);
+    }
+    .rating-badge.r3, .rating-badge.average {
+      background: rgba(251,191,36,0.12);
+      color: #fbbf24;
+    }
+    .rating-badge.r2 {
+      background: rgba(251,146,60,0.12);
+      color: #fb923c;
+    }
+    .rating-badge.r1 {
+      background: rgba(248,113,113,0.12);
+      color: #f87171;
+    }
+
+    .comments-text {
+      color: var(--muted);
+      max-width: 280px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+    .empty-state small { font-size: 13px; font-weight: 300; }
+
+    .loader {
+      text-align: center;
+      padding: 50px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .dot-pulse {
+      display: inline-flex;
+      gap: 5px;
+    }
+    .dot-pulse span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+    .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1.1); }
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 24px; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-left">
+        <div class="badge">Academic Portal</div>
+        <h1>Feedback <span>Dashboard</span></h1>
+        <p>All submitted student responses in one place</p>
+      </div>
+      <a href="/" class="back-btn">← Submit Feedback</a>
+    </header>
+
+    <div class="stats" id="stats">
+      <div class="stat-card">
+        <div class="label">Total Responses</div>
+        <div class="value accent" id="statTotal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Avg. Rating</div>
+        <div class="value accent" id="statAvg">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Top Rating</div>
+        <div class="value accent" id="statTop">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Courses</div>
+        <div class="value accent" id="statCourses">—</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="text" id="search" placeholder="Search by name, course, or comment…" oninput="filterTable()"/>
+      </div>
+      <select class="filter-select" id="ratingFilter" onchange="filterTable()">
+        <option value="">All Ratings</option>
+        <option value="5">★★★★★ Excellent</option>
+        <option value="4">★★★★ Good</option>
+        <option value="3">★★★ Average</option>
+        <option value="2">★★ Poor</option>
+        <option value="1">★ Very Poor</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <div class="loader" id="loader">
+        <div class="dot-pulse">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <div id="tableContainer" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Course</th>
+              <th>Rating</th>
+              <th>Comments</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div class="empty-state" id="emptyState" style="display:none">
+          <div class="icon">📭</div>
+          <p>No feedback found</p>
+          <small>Try adjusting your search or filter</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allData = [];
+
+    function starLabel(val) {
+      const v = parseInt(val);
+      const labels = { 5: 'Excellent', 4: 'Good', 3: 'Average', 2: 'Poor', 1: 'Very Poor' };
+      const stars = '★'.repeat(v) + '☆'.repeat(5 - v);
+      return `<span class="rating-badge r${v}">${stars} ${labels[v] || val}</span>`;
+    }
+
+    // support both numeric and text ratings
+    function getRatingNum(r) {
+      if (!isNaN(r)) return parseInt(r);
+      const map = { 'excellent': 5, 'good': 4, 'average': 3, 'poor': 2, 'very poor': 1 };
+      return map[(r || '').toLowerCase()] || 0;
+    }
+
+    function initials(name) {
+      return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    }
+
+    function renderRow(f) {
+      return `
+        <tr data-name="${(f.name||'').toLowerCase()}" data-course="${(f.course||'').toLowerCase()}" data-comments="${(f.comments||'').toLowerCase()}" data-rating="${getRatingNum(f.rating)}">
+          <td><div class="name-cell"><div class="avatar">${initials(f.name)}</div><span>${f.name || '—'}</span></div></td>
+          <td>${f.course || '—'}</td>
+          <td>${starLabel(getRatingNum(f.rating))}</td>
+          <td><span class="comments-text">${f.comments || '<em style="color:var(--muted)">No comment</em>'}</span></td>
+        </tr>`;
+    }
+
+    function filterTable() {
+      const q = document.getElementById('search').value.toLowerCase();
+      const rf = document.getElementById('ratingFilter').value;
+      const rows = document.querySelectorAll('#tableBody tr');
+      let visible = 0;
+      rows.forEach(row => {
+        const matchQ = !q || row.dataset.name.includes(q) || row.dataset.course.includes(q) || row.dataset.comments.includes(q);
+        const matchR = !rf || row.dataset.rating === rf;
+        const show = matchQ && matchR;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/feedbacks');
+        allData = await res.json();
+
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('tableContainer').style.display = 'block';
+
+        // Stats
+        const total = allData.length;
+        const ratings = allData.map(f => getRatingNum(f.rating)).filter(Boolean);
+        const avg = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '—';
+        const topCount = ratings.filter(r => r >= 4).length;
+        const courses = new Set(allData.map(f => (f.course || '').trim().toLowerCase()).filter(Boolean)).size;
+
+        document.getElementById('statTotal').textContent = total;
+        document.getElementById('statAvg').textContent = avg === '—' ? '—' : avg + ' ★';
+        document.getElementById('statTop').textContent = topCount;
+        document.getElementById('statCourses').textContent = courses;
+
+        const tbody = document.getElementById('tableBody');
+        if (total === 0) {
+          document.getElementById('emptyState').style.display = 'block';
+        } else {
+          tbody.innerHTML = allData.map(renderRow).join('');
+        }
+      } catch (err) {
+        document.getElementById('loader').innerHTML = '<p style="color:var(--error)">Failed to load feedback. Is the server running?</p>';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

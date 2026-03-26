@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Feedback</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #161920;
+      --surface2: #1e2230;
+      --border: #2a2f42;
+      --accent: #6c8fff;
+      --accent2: #a78bfa;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --success: #34d399;
+      --error: #f87171;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      overflow-x: hidden;
+    }
+
+    /* Background glow blobs */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 500px; height: 500px;
+      background: var(--accent);
+      top: -100px; left: -100px;
+      animation: drift1 12s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: var(--accent2);
+      bottom: -80px; right: -80px;
+      animation: drift2 14s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift1 { to { transform: translate(60px, 80px); } }
+    @keyframes drift2 { to { transform: translate(-60px, -60px); } }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+      animation: fadeUp 0.6s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .card-header .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(108,143,255,0.1);
+      border: 1px solid rgba(108,143,255,0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    h2 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card-header p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 300;
+    }
+
+    .field {
+      margin-bottom: 20px;
+      animation: fadeUp 0.6s ease both;
+    }
+    .field:nth-child(1) { animation-delay: 0.1s; }
+    .field:nth-child(2) { animation-delay: 0.15s; }
+    .field:nth-child(3) { animation-delay: 0.2s; }
+    .field:nth-child(4) { animation-delay: 0.25s; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      padding: 13px 16px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      -webkit-appearance: none;
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108,143,255,0.15);
+      background: #1a1f2e;
+    }
+
+    select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    select option { background: #1e2230; }
+
+    textarea {
+      resize: vertical;
+      min-height: 110px;
+      line-height: 1.6;
+    }
+
+    /* Star rating */
+    .star-rating {
+      display: flex;
+      gap: 6px;
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+    }
+
+    .star-rating input { display: none; }
+
+    .star-rating label {
+      font-size: 26px;
+      color: var(--border);
+      cursor: pointer;
+      transition: color 0.15s, transform 0.15s;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .star-rating label:hover,
+    .star-rating label:hover ~ label,
+    .star-rating input:checked ~ label {
+      color: #fbbf24;
+    }
+
+    .star-rating label:hover { transform: scale(1.2); }
+
+    /* Rating select fallback hidden, showing stars instead */
+    #ratingSelect { display: none; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      margin-top: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.3px;
+    }
+
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn .btn-text { transition: opacity 0.2s; }
+    .btn .spinner {
+      display: none;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .btn.loading .btn-text { opacity: 0; }
+    .btn.loading .spinner { display: block; }
+
+    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 100;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: rgba(52,211,153,0.3); }
+    .toast.error   { border-color: rgba(248,113,113,0.3); }
+
+    .toast-icon { font-size: 18px; }
+
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 28px 0 24px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1;
+      height: 1px; background: var(--border);
+    }
+
+    .view-link {
+      display: block;
+      text-align: center;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 10px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(108,143,255,0.2);
+      background: rgba(108,143,255,0.05);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .view-link:hover {
+      background: rgba(108,143,255,0.12);
+      border-color: rgba(108,143,255,0.4);
+    }
+
+    @media (max-width: 560px) {
+      .card { padding: 28px 22px; }
+      h2 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="badge">Academic Portal</div>
+      <h2>Share Your <span>Feedback</span></h2>
+      <p>Help us improve the learning experience</p>
+    </div>
+
+    <form id="feedbackForm" novalidate>
+      <div class="field">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" placeholder="e.g. Jane Mwangi" required autocomplete="name"/>
+      </div>
+
+      <div class="field">
+        <label for="course">Course</label>
+        <input type="text" id="course" placeholder="e.g. Introduction to Computer Science" required/>
+      </div>
+
+      <div class="field">
+        <label>Rating</label>
+        <div class="star-rating">
+          <input type="radio" id="s5" name="stars" value="5"/>
+          <label for="s5" title="Excellent">★</label>
+          <input type="radio" id="s4" name="stars" value="4"/>
+          <label for="s4" title="Good">★</label>
+          <input type="radio" id="s3" name="stars" value="3"/>
+          <label for="s3" title="Average">★</label>
+          <input type="radio" id="s2" name="stars" value="2"/>
+          <label for="s2" title="Poor">★</label>
+          <input type="radio" id="s1" name="stars" value="1"/>
+          <label for="s1" title="Very Poor">★</label>
+        </div>
+        <!-- Hidden fallback used by server -->
+        <select id="ratingSelect" name="rating">
+          <option value="5">Excellent (5★)</option>
+          <option value="4">Good (4★)</option>
+          <option value="3">Average (3★)</option>
+          <option value="2">Poor (2★)</option>
+          <option value="1">Very Poor (1★)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="comments">Comments</label>
+        <textarea id="comments" placeholder="Share what went well, what could be improved, or anything else on your mind…"></textarea>
+      </div>
+
+      <button type="submit" class="btn" id="submitBtn">
+        <span class="btn-text">Submit Feedback</span>
+        <span class="spinner"></span>
+      </button>
+    </form>
+
+    <div class="divider">or</div>
+    <a href="/view.html" class="view-link">📋 View All Submitted Feedback</a>
+  </div>
+
+  <div class="toast" id="toast">
+    <span class="toast-icon" id="toastIcon">✓</span>
+    <span id="toastMsg">Feedback submitted!</span>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
