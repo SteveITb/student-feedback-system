@@ -3,21 +3,24 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Feedback Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <title>Feedback Dashboard — Zetech University</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg: #0d0f14;
-      --surface: #161920;
-      --surface2: #1e2230;
-      --border: #2a2f42;
+      --bg: #07090f;
+      --surface: rgba(20,24,36,0.85);
+      --surface2: rgba(30,36,54,0.9);
+      --border: rgba(255,255,255,0.08);
       --accent: #6c8fff;
       --accent2: #a78bfa;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --orange: #fb923c;
+      --red: #f87171;
       --text: #e8eaf0;
       --muted: #6b7280;
-      --success: #34d399;
-      --warn: #fbbf24;
-      --radius: 12px;
+      --radius: 14px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,62 +30,124 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 80px 24px 40px;
+      padding: 80px 24px 60px;
+      position: relative;
+      overflow-x: hidden;
     }
 
-    body::before {
-      content: '';
+    /* Animated gradient background */
+    .bg-gradient {
       position: fixed;
-      width: 600px; height: 600px;
-      background: var(--accent);
-      border-radius: 50%;
-      filter: blur(160px);
-      opacity: 0.08;
-      top: -200px; right: -100px;
-      pointer-events: none;
+      inset: 0;
       z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108,143,255,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(167,139,250,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(52,211,153,0.06) 0%, transparent 70%),
+        #07090f;
+      animation: bgShift 15s ease-in-out infinite alternate;
     }
+    @keyframes bgShift {
+      from { filter: hue-rotate(0deg); }
+      to   { filter: hue-rotate(30deg); }
+    }
+
+    /* Navbar */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 32px;
+      background: rgba(7,9,15,0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .navbar-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px; font-weight: 700;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .navbar-brand span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .navbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .user-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px 6px 8px;
+      font-size: 13px;
+    }
+
+    .user-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: #fff;
+      text-transform: uppercase;
+    }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px; padding: 7px 14px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .logout-btn:hover { color: var(--red); border-color: var(--red); background: rgba(248,113,113,0.05); }
 
     .container {
-      max-width: 1000px;
+      max-width: 1200px;
       margin: 0 auto;
       position: relative;
       z-index: 1;
     }
 
-    header {
+    /* Header */
+    .page-header {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 16px;
-      margin-bottom: 36px;
+      margin-bottom: 32px;
       animation: fadeUp 0.5s ease both;
     }
 
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
+      from { opacity: 0; transform: translateY(24px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    .header-left .badge {
+    .badge {
       display: inline-block;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 2px;
-      text-transform: uppercase;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
       color: var(--accent);
-      background: rgba(108,143,255,0.1);
-      border: 1px solid rgba(108,143,255,0.2);
-      padding: 4px 12px;
-      border-radius: 20px;
+      background: rgba(108,143,255,0.12);
+      border: 1px solid rgba(108,143,255,0.25);
+      padding: 4px 12px; border-radius: 20px;
       margin-bottom: 10px;
     }
 
     h1 {
       font-family: 'Playfair Display', serif;
-      font-size: 30px;
-      font-weight: 700;
+      font-size: 32px; font-weight: 700;
+      line-height: 1.2;
     }
 
     h1 span {
@@ -91,87 +156,152 @@
       -webkit-text-fill-color: transparent;
     }
 
-    .header-left p {
-      color: var(--muted);
-      font-size: 14px;
-      margin-top: 6px;
-      font-weight: 300;
-    }
+    .page-header p { color: var(--muted); font-size: 14px; margin-top: 6px; font-weight: 300; }
 
     .back-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      background: var(--surface);
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px;
+      background: rgba(255,255,255,0.05);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 13px; font-weight: 500;
       text-decoration: none;
-      transition: border-color 0.2s, background 0.2s;
+      transition: all 0.2s;
       white-space: nowrap;
     }
+    .back-btn:hover { border-color: var(--accent); background: rgba(108,143,255,0.08); }
 
-    .back-btn:hover {
-      border-color: var(--accent);
-      background: rgba(108,143,255,0.06);
-    }
-
-    /* Stats row */
+    /* ── STAT CARDS ── */
     .stats {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
-      margin-bottom: 28px;
-      animation: fadeUp 0.5s 0.1s ease both;
+      margin-bottom: 24px;
+      animation: fadeUp 0.5s 0.08s ease both;
     }
 
     .stat-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
-    }
-
-    .stat-card .label {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .stat-card .value {
-      font-family: 'Playfair Display', serif;
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .stat-card .value.accent {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    /* Search/filter */
-    .toolbar {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-      animation: fadeUp 0.5s 0.15s ease both;
-    }
-
-    .search-wrap {
-      flex: 1;
-      min-width: 200px;
+      padding: 22px 24px;
+      backdrop-filter: blur(20px);
       position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
+
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .stat-card.c1::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .stat-card.c2::before { background: linear-gradient(90deg, var(--green), #22d3ee); }
+    .stat-card.c3::before { background: linear-gradient(90deg, var(--yellow), var(--orange)); }
+    .stat-card.c4::before { background: linear-gradient(90deg, var(--accent2), var(--red)); }
+
+    .stat-icon {
+      font-size: 28px; margin-bottom: 12px;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px; font-weight: 700;
+      line-height: 1;
+    }
+
+    .stat-card.c1 .stat-value { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-card.c2 .stat-value { background: linear-gradient(135deg, var(--green), #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-card.c3 .stat-value { background: linear-gradient(135deg, var(--yellow), var(--orange)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-card.c4 .stat-value { background: linear-gradient(135deg, var(--accent2), #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 300; }
+
+    /* ── CHARTS ROW ── */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.5s 0.14s ease both;
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      backdrop-filter: blur(20px);
+    }
+
+    .chart-card h3 {
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 0.5px;
+      color: var(--text);
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .chart-card h3 .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+    }
+
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* Rating distribution bars */
+    .rating-bars { display: flex; flex-direction: column; gap: 10px; }
+
+    .rating-bar-row {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px;
+    }
+
+    .rating-bar-label { width: 80px; color: var(--muted); flex-shrink: 0; font-size: 12px; }
+
+    .rating-bar-track {
+      flex: 1; height: 10px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 20px; overflow: hidden;
+    }
+
+    .rating-bar-fill {
+      height: 100%; border-radius: 20px;
+      transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+      width: 0%;
+    }
+
+    .bar-r5 { background: linear-gradient(90deg, #34d399, #22d3ee); }
+    .bar-r4 { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .bar-r3 { background: linear-gradient(90deg, var(--yellow), var(--orange)); }
+    .bar-r2 { background: linear-gradient(90deg, var(--orange), var(--red)); }
+    .bar-r1 { background: linear-gradient(90deg, var(--red), #e11d48); }
+
+    .rating-bar-count { width: 24px; text-align: right; color: var(--muted); font-size: 12px; flex-shrink: 0; }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 16px;
+      animation: fadeUp 0.5s 0.18s ease both;
+    }
+
+    .search-wrap { flex: 1; min-width: 220px; position: relative; }
 
     .search-wrap input {
       width: 100%;
@@ -181,22 +311,18 @@
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
       font-size: 14px;
-      padding: 11px 16px 11px 40px;
+      padding: 12px 16px 12px 42px;
       outline: none;
+      backdrop-filter: blur(20px);
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .search-wrap input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(108,143,255,0.12);
-    }
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,143,255,0.12); }
 
     .search-wrap::before {
-      content: '🔍';
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
+      content: '🔍'; position: absolute;
+      left: 15px; top: 50%; transform: translateY(-50%);
       font-size: 13px;
     }
 
@@ -207,41 +333,50 @@
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
       font-size: 14px;
-      padding: 11px 36px 11px 14px;
-      outline: none;
-      cursor: pointer;
+      padding: 12px 36px 12px 14px;
+      outline: none; cursor: pointer;
       -webkit-appearance: none;
+      backdrop-filter: blur(20px);
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 12px center;
       transition: border-color 0.2s;
     }
-
     .filter-select:focus { border-color: var(--accent); }
     .filter-select option { background: #1e2230; }
 
-    /* Table */
+    .export-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, var(--green), #22d3ee);
+      color: #000;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 600;
+      border: none; border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .export-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── TABLE ── */
     .table-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: var(--radius);
       overflow: hidden;
-      animation: fadeUp 0.5s 0.2s ease both;
+      backdrop-filter: blur(20px);
+      animation: fadeUp 0.5s 0.22s ease both;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+    table { width: 100%; border-collapse: collapse; }
 
     thead th {
-      background: var(--surface2);
+      background: rgba(255,255,255,0.03);
       padding: 14px 18px;
       text-align: left;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 1px;
-      text-transform: uppercase;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase;
       color: var(--muted);
       border-bottom: 1px solid var(--border);
     }
@@ -249,179 +384,118 @@
     tbody tr {
       border-bottom: 1px solid var(--border);
       transition: background 0.15s;
+      cursor: pointer;
     }
 
     tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody tr:hover { background: rgba(108,143,255,0.06); }
 
     tbody td {
-      padding: 16px 18px;
+      padding: 15px 18px;
       font-size: 14px;
-      vertical-align: top;
+      vertical-align: middle;
       line-height: 1.5;
     }
 
+    /* Expanded row */
+    .expand-row { display: none; }
+    .expand-row.open { display: table-row; }
+
+    .expand-content {
+      padding: 16px 18px 20px 70px;
+      background: rgba(108,143,255,0.04);
+      border-top: 1px solid var(--border);
+      font-size: 14px; color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .expand-content strong { color: var(--text); font-weight: 500; }
+
+    .name-cell { display: flex; align-items: center; gap: 10px; }
+
     .avatar {
-      width: 34px; height: 34px;
-      border-radius: 50%;
+      width: 36px; height: 36px; border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 600;
-      color: #fff;
-      flex-shrink: 0;
-      text-transform: uppercase;
-    }
-
-    .name-cell {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .stars {
-      color: #fbbf24;
-      font-size: 13px;
-      letter-spacing: 1px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: #fff;
+      flex-shrink: 0; text-transform: uppercase;
     }
 
     .rating-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 12px;
-      font-weight: 500;
-      padding: 3px 10px;
-      border-radius: 20px;
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 600;
+      padding: 4px 12px; border-radius: 20px;
+      letter-spacing: 0.3px;
     }
 
-    .rating-badge.r5, .rating-badge.excellent {
-      background: rgba(52,211,153,0.12);
-      color: #34d399;
-    }
-    .rating-badge.r4, .rating-badge.good {
-      background: rgba(108,143,255,0.12);
-      color: var(--accent);
-    }
-    .rating-badge.r3, .rating-badge.average {
-      background: rgba(251,191,36,0.12);
-      color: #fbbf24;
-    }
-    .rating-badge.r2 {
-      background: rgba(251,146,60,0.12);
-      color: #fb923c;
-    }
-    .rating-badge.r1 {
-      background: rgba(248,113,113,0.12);
-      color: #f87171;
+    .r5 { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+    .r4 { background: rgba(108,143,255,0.15); color: var(--accent); border: 1px solid rgba(108,143,255,0.2); }
+    .r3 { background: rgba(251,191,36,0.15); color: var(--yellow); border: 1px solid rgba(251,191,36,0.2); }
+    .r2 { background: rgba(251,146,60,0.15); color: var(--orange); border: 1px solid rgba(251,146,60,0.2); }
+    .r1 { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+
+    .date-text { color: var(--muted); font-size: 12px; }
+
+    .comments-preview {
+      color: var(--muted); font-size: 13px;
+      max-width: 200px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    .comments-text {
-      color: var(--muted);
-      max-width: 280px;
-      white-space: pre-wrap;
-      word-break: break-word;
+    .expand-arrow {
+      color: var(--muted); font-size: 12px;
+      transition: transform 0.2s;
+      display: inline-block;
     }
+    .expand-arrow.open { transform: rotate(180deg); }
 
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-    }
-
-    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    /* Empty / loader */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state .icon { font-size: 44px; margin-bottom: 12px; }
     .empty-state p { font-size: 15px; }
     .empty-state small { font-size: 13px; font-weight: 300; }
 
-    .loader {
-      text-align: center;
-      padding: 50px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .dot-pulse {
-      display: inline-flex;
-      gap: 5px;
-    }
+    .loader { text-align: center; padding: 60px; color: var(--muted); font-size: 14px; }
+    .dot-pulse { display: inline-flex; gap: 6px; }
     .dot-pulse span {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
+      width: 8px; height: 8px; border-radius: 50%;
       animation: pulse 1.2s ease-in-out infinite;
     }
-    .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
-    .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+    .dot-pulse span:nth-child(1) { background: var(--accent); }
+    .dot-pulse span:nth-child(2) { background: var(--accent2); animation-delay: 0.2s; }
+    .dot-pulse span:nth-child(3) { background: var(--green); animation-delay: 0.4s; }
 
     @keyframes pulse {
       0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-      40% { opacity: 1; transform: scale(1.1); }
+      40% { opacity: 1; transform: scale(1.2); }
     }
 
-    @media (max-width: 640px) {
+    /* Result count */
+    .result-count {
+      font-size: 12px; color: var(--muted);
+      margin-bottom: 10px; text-align: right;
+      animation: fadeUp 0.5s 0.2s ease both;
+    }
+
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .charts-row { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
       h1 { font-size: 24px; }
       .stats { grid-template-columns: repeat(2, 1fr); }
-      thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+      thead th:nth-child(4), tbody td:nth-child(4),
+      thead th:nth-child(5), tbody td:nth-child(5) { display: none; }
+      .navbar { padding: 12px 16px; }
     }
-
-    .navbar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 50;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 28px;
-      background: rgba(13,15,20,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-    }
-    .navbar-brand {
-      font-family: 'Playfair Display', serif;
-      font-size: 16px; font-weight: 700;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .navbar-brand span {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .navbar-right { display: flex; align-items: center; gap: 12px; }
-    .user-pill {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 6px 14px 6px 8px;
-      font-size: 13px;
-    }
-    .user-avatar {
-      width: 26px; height: 26px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 600; color: #fff;
-      text-transform: uppercase;
-    }
-    .logout-btn {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--muted);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12px; padding: 6px 12px;
-      cursor: pointer;
-      transition: color 0.2s, border-color 0.2s;
-    }
-    .logout-btn:hover { color: #f87171; border-color: #f87171; }
   </style>
 </head>
 <body>
+  <div class="bg-gradient"></div>
 
   <nav class="navbar">
-    <div class="navbar-brand">🎓 <span>Feedback</span> Portal</div>
+    <div class="navbar-brand">🎓 <span>Zetech</span> Feedback Portal</div>
     <div class="navbar-right">
       <div class="user-pill">
         <div class="user-avatar" id="userAvatar">?</div>
@@ -432,34 +506,85 @@
   </nav>
 
   <div class="container">
-    <header>
-      <div class="header-left">
-        <div class="badge">Academic Portal</div>
-        <h1>Feedback <span>Dashboard</span></h1>
-        <p>All submitted student responses in one place</p>
+    <div class="page-header">
+      <div>
+        <div class="badge">Admin Dashboard</div>
+        <h1>Feedback <span>Analytics</span></h1>
+        <p>Real-time student responses · Zetech University</p>
       </div>
       <a href="/" class="back-btn">← Submit Feedback</a>
-    </header>
+    </div>
 
-    <div class="stats" id="stats">
-      <div class="stat-card">
-        <div class="label">Total Responses</div>
-        <div class="value accent" id="statTotal">—</div>
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card c1">
+        <span class="stat-icon">📋</span>
+        <div class="stat-label">Total Responses</div>
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-sub">All time submissions</div>
       </div>
-      <div class="stat-card">
-        <div class="label">Avg. Rating</div>
-        <div class="value accent" id="statAvg">—</div>
+      <div class="stat-card c2">
+        <span class="stat-icon">⭐</span>
+        <div class="stat-label">Average Rating</div>
+        <div class="stat-value" id="statAvg">—</div>
+        <div class="stat-sub">Out of 5 stars</div>
       </div>
-      <div class="stat-card">
-        <div class="label">Top Rating</div>
-        <div class="value accent" id="statTop">—</div>
+      <div class="stat-card c3">
+        <span class="stat-icon">🏆</span>
+        <div class="stat-label">Excellent Ratings</div>
+        <div class="stat-value" id="statTop">0</div>
+        <div class="stat-sub">4★ and above</div>
       </div>
-      <div class="stat-card">
-        <div class="label">Courses</div>
-        <div class="value accent" id="statCourses">—</div>
+      <div class="stat-card c4">
+        <span class="stat-icon">📚</span>
+        <div class="stat-label">Courses Reviewed</div>
+        <div class="stat-value" id="statCourses">0</div>
+        <div class="stat-sub">Unique courses</div>
       </div>
     </div>
 
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3><span class="dot"></span>Rating Distribution</h3>
+        <div class="rating-bars" id="ratingBars">
+          <div class="rating-bar-row">
+            <span class="rating-bar-label">★★★★★ Excellent</span>
+            <div class="rating-bar-track"><div class="rating-bar-fill bar-r5" id="bar5"></div></div>
+            <span class="rating-bar-count" id="count5">0</span>
+          </div>
+          <div class="rating-bar-row">
+            <span class="rating-bar-label">★★★★ Good</span>
+            <div class="rating-bar-track"><div class="rating-bar-fill bar-r4" id="bar4"></div></div>
+            <span class="rating-bar-count" id="count4">0</span>
+          </div>
+          <div class="rating-bar-row">
+            <span class="rating-bar-label">★★★ Average</span>
+            <div class="rating-bar-track"><div class="rating-bar-fill bar-r3" id="bar3"></div></div>
+            <span class="rating-bar-count" id="count3">0</span>
+          </div>
+          <div class="rating-bar-row">
+            <span class="rating-bar-label">★★ Poor</span>
+            <div class="rating-bar-track"><div class="rating-bar-fill bar-r2" id="bar2"></div></div>
+            <span class="rating-bar-count" id="count2">0</span>
+          </div>
+          <div class="rating-bar-row">
+            <span class="rating-bar-label">★ Very Poor</span>
+            <div class="rating-bar-track"><div class="rating-bar-fill bar-r1" id="bar1"></div></div>
+            <span class="rating-bar-count" id="count1">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3><span class="dot" style="background:linear-gradient(135deg,#34d399,#22d3ee)"></span>Ratings Overview</h3>
+        <div class="chart-wrap">
+          <canvas id="donutChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
     <div class="toolbar">
       <div class="search-wrap">
         <input type="text" id="search" placeholder="Search by name, course, or comment…" oninput="filterTable()"/>
@@ -472,13 +597,16 @@
         <option value="2">★★ Poor</option>
         <option value="1">★ Very Poor</option>
       </select>
+      <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
     </div>
 
+    <div class="result-count" id="resultCount"></div>
+
+    <!-- Table -->
     <div class="table-wrap">
       <div class="loader" id="loader">
-        <div class="dot-pulse">
-          <span></span><span></span><span></span>
-        </div>
+        <div class="dot-pulse"><span></span><span></span><span></span></div>
+        <p style="margin-top:14px;font-size:13px;">Loading feedback…</p>
       </div>
       <div id="tableContainer" style="display:none">
         <table>
@@ -487,7 +615,9 @@
               <th>Student</th>
               <th>Course</th>
               <th>Rating</th>
-              <th>Comments</th>
+              <th>Comment Preview</th>
+              <th>Date</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
@@ -502,87 +632,7 @@
   </div>
 
   <script>
-    let allData = [];
-
-    function starLabel(val) {
-      const v = parseInt(val);
-      const labels = { 5: 'Excellent', 4: 'Good', 3: 'Average', 2: 'Poor', 1: 'Very Poor' };
-      const stars = '★'.repeat(v) + '☆'.repeat(5 - v);
-      return `<span class="rating-badge r${v}">${stars} ${labels[v] || val}</span>`;
-    }
-
-    // support both numeric and text ratings
-    function getRatingNum(r) {
-      if (!isNaN(r)) return parseInt(r);
-      const map = { 'excellent': 5, 'good': 4, 'average': 3, 'poor': 2, 'very poor': 1 };
-      return map[(r || '').toLowerCase()] || 0;
-    }
-
-    function initials(name) {
-      return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    }
-
-    function renderRow(f) {
-      return `
-        <tr data-name="${(f.name||'').toLowerCase()}" data-course="${(f.course||'').toLowerCase()}" data-comments="${(f.comments||'').toLowerCase()}" data-rating="${getRatingNum(f.rating)}">
-          <td><div class="name-cell"><div class="avatar">${initials(f.name)}</div><span>${f.name || '—'}</span></div></td>
-          <td>${f.course || '—'}</td>
-          <td>${starLabel(getRatingNum(f.rating))}</td>
-          <td><span class="comments-text">${f.comments || '<em style="color:var(--muted)">No comment</em>'}</span></td>
-        </tr>`;
-    }
-
-    function filterTable() {
-      const q = document.getElementById('search').value.toLowerCase();
-      const rf = document.getElementById('ratingFilter').value;
-      const rows = document.querySelectorAll('#tableBody tr');
-      let visible = 0;
-      rows.forEach(row => {
-        const matchQ = !q || row.dataset.name.includes(q) || row.dataset.course.includes(q) || row.dataset.comments.includes(q);
-        const matchR = !rf || row.dataset.rating === rf;
-        const show = matchQ && matchR;
-        row.style.display = show ? '' : 'none';
-        if (show) visible++;
-      });
-      document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
-    }
-
-    async function load() {
-      try {
-        const res = await fetch('/feedbacks');
-        allData = await res.json();
-
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('tableContainer').style.display = 'block';
-
-        // Stats
-        const total = allData.length;
-        const ratings = allData.map(f => getRatingNum(f.rating)).filter(Boolean);
-        const avg = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '—';
-        const topCount = ratings.filter(r => r >= 4).length;
-        const courses = new Set(allData.map(f => (f.course || '').trim().toLowerCase()).filter(Boolean)).size;
-
-        document.getElementById('statTotal').textContent = total;
-        document.getElementById('statAvg').textContent = avg === '—' ? '—' : avg + ' ★';
-        document.getElementById('statTop').textContent = topCount;
-        document.getElementById('statCourses').textContent = courses;
-
-        const tbody = document.getElementById('tableBody');
-        if (total === 0) {
-          document.getElementById('emptyState').style.display = 'block';
-        } else {
-          tbody.innerHTML = allData.map(renderRow).join('');
-        }
-      } catch (err) {
-        document.getElementById('loader').innerHTML = '<p style="color:var(--error)">Failed to load feedback. Is the server running?</p>';
-      }
-    }
-
-    load();
-  </script>
-
-  <script>
-    // Admin-only auth guard
+    // ── Auth guard ────────────────────────────────────────────────────────────
     const token = localStorage.getItem('token');
     const user  = JSON.parse(localStorage.getItem('user') || 'null');
     if (!token) { window.location.href = '/login.html'; }
@@ -598,6 +648,215 @@
       localStorage.removeItem('user');
       window.location.href = '/login.html';
     }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    let allData = [];
+    let donutChart;
+
+    function getRatingNum(r) {
+      if (r !== undefined && r !== null && !isNaN(r)) return parseInt(r);
+      const map = { 'excellent': 5, 'good': 4, 'average': 3, 'poor': 2, 'very poor': 1 };
+      return map[(r || '').toLowerCase()] || 0;
+    }
+
+    function initials(name) {
+      return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    }
+
+    function starLabel(v) {
+      const labels = { 5: 'Excellent', 4: 'Good', 3: 'Average', 2: 'Poor', 1: 'Very Poor' };
+      const stars = '★'.repeat(v) + '☆'.repeat(5 - v);
+      return `<span class="rating-badge r${v}">${stars} ${labels[v] || v}</span>`;
+    }
+
+    function formatDate(d) {
+      if (!d) return '—';
+      return new Date(d).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    // ── Counter animation ─────────────────────────────────────────────────────
+    function animateCount(el, target, suffix = '') {
+      const duration = 900;
+      const start = performance.now();
+      const isFloat = String(target).includes('.');
+      function step(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const val = isFloat ? (ease * target).toFixed(1) : Math.round(ease * target);
+        el.textContent = val + suffix;
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    // ── Build donut chart ─────────────────────────────────────────────────────
+    function buildChart(counts) {
+      const ctx = document.getElementById('donutChart').getContext('2d');
+      if (donutChart) donutChart.destroy();
+      donutChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Excellent (5★)', 'Good (4★)', 'Average (3★)', 'Poor (2★)', 'Very Poor (1★)'],
+          datasets: [{
+            data: [counts[5], counts[4], counts[3], counts[2], counts[1]],
+            backgroundColor: ['#34d399','#6c8fff','#fbbf24','#fb923c','#f87171'],
+            borderColor: 'rgba(7,9,15,0.8)',
+            borderWidth: 3,
+            hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                color: '#6b7280', font: { size: 11, family: 'DM Sans' },
+                boxWidth: 10, padding: 12
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.label}: ${ctx.raw} response${ctx.raw !== 1 ? 's' : ''}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ── Render rows ───────────────────────────────────────────────────────────
+    function renderRow(f, idx) {
+      const v = getRatingNum(f.rating);
+      const preview = (f.comments || '').slice(0, 60) + (f.comments && f.comments.length > 60 ? '…' : '');
+      return `
+        <tr onclick="toggleExpand(${idx})" data-name="${(f.name||'').toLowerCase()}" data-course="${(f.course||'').toLowerCase()}" data-comments="${(f.comments||'').toLowerCase()}" data-rating="${v}">
+          <td><div class="name-cell"><div class="avatar">${initials(f.name)}</div><span>${f.name || '—'}</span></div></td>
+          <td>${f.course || '—'}</td>
+          <td>${starLabel(v)}</td>
+          <td><span class="comments-preview">${preview || '<em style="color:var(--muted)">No comment</em>'}</span></td>
+          <td><span class="date-text">${formatDate(f.submittedAt || f.createdAt)}</span></td>
+          <td><span class="expand-arrow" id="arrow-${idx}">▾</span></td>
+        </tr>
+        <tr class="expand-row" id="expand-${idx}">
+          <td colspan="6" style="padding:0">
+            <div class="expand-content">
+              <strong>Full Comment:</strong><br/>
+              ${f.comments || '<em>No comment provided.</em>'}
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    function toggleExpand(idx) {
+      const row   = document.getElementById(`expand-${idx}`);
+      const arrow = document.getElementById(`arrow-${idx}`);
+      const isOpen = row.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.expand-row').forEach(r => r.classList.remove('open'));
+      document.querySelectorAll('.expand-arrow').forEach(a => a.classList.remove('open'));
+      if (!isOpen) {
+        row.classList.add('open');
+        arrow.classList.add('open');
+      }
+    }
+
+    // ── Filter ────────────────────────────────────────────────────────────────
+    function filterTable() {
+      const q  = document.getElementById('search').value.toLowerCase();
+      const rf = document.getElementById('ratingFilter').value;
+      const rows = document.querySelectorAll('#tableBody tr:not(.expand-row)');
+      let visible = 0;
+      rows.forEach(row => {
+        const matchQ = !q || row.dataset.name.includes(q) || row.dataset.course.includes(q) || row.dataset.comments.includes(q);
+        const matchR = !rf || row.dataset.rating === rf;
+        const show   = matchQ && matchR;
+        const idx = row.getAttribute('onclick').match(/\d+/)[0];
+        row.style.display = show ? '' : 'none';
+        document.getElementById(`expand-${idx}`).style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+      document.getElementById('resultCount').textContent = `Showing ${visible} of ${allData.length} response${allData.length !== 1 ? 's' : ''}`;
+    }
+
+    // ── Export CSV ────────────────────────────────────────────────────────────
+    function exportCSV() {
+      const headers = ['Name', 'Course', 'Rating', 'Comments', 'Date'];
+      const rows = allData.map(f => [
+        `"${(f.name||'').replace(/"/g,'""')}"`,
+        `"${(f.course||'').replace(/"/g,'""')}"`,
+        getRatingNum(f.rating),
+        `"${(f.comments||'').replace(/"/g,'""')}"`,
+        formatDate(f.submittedAt || f.createdAt)
+      ]);
+      const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'zetech-feedback.csv';
+      a.click(); URL.revokeObjectURL(url);
+    }
+
+    // ── Load data ─────────────────────────────────────────────────────────────
+    async function load() {
+      try {
+        const res = await fetch('/feedbacks', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (res.status === 401) { logout(); return; }
+
+        allData = await res.json();
+
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('tableContainer').style.display = 'block';
+
+        // Compute stats
+        const total   = allData.length;
+        const ratings = allData.map(f => getRatingNum(f.rating)).filter(Boolean);
+        const avg     = ratings.length ? ratings.reduce((a,b) => a+b,0) / ratings.length : 0;
+        const topCount= ratings.filter(r => r >= 4).length;
+        const courses = new Set(allData.map(f => (f.course||'').trim().toLowerCase()).filter(Boolean)).size;
+
+        // Animate stat counters
+        animateCount(document.getElementById('statTotal'), total);
+        animateCount(document.getElementById('statAvg'), avg, ' ★');
+        animateCount(document.getElementById('statTop'), topCount);
+        animateCount(document.getElementById('statCourses'), courses);
+
+        // Rating counts
+        const counts = {1:0,2:0,3:0,4:0,5:0};
+        ratings.forEach(r => { if (counts[r] !== undefined) counts[r]++; });
+
+        // Animate bars
+        const maxCount = Math.max(...Object.values(counts), 1);
+        setTimeout(() => {
+          [1,2,3,4,5].forEach(r => {
+            const pct = (counts[r] / maxCount) * 100;
+            document.getElementById(`bar${r}`).style.width = pct + '%';
+            document.getElementById(`count${r}`).textContent = counts[r];
+          });
+        }, 200);
+
+        // Build donut
+        buildChart(counts);
+
+        // Render table
+        if (total === 0) {
+          document.getElementById('emptyState').style.display = 'block';
+        } else {
+          document.getElementById('tableBody').innerHTML = allData.map(renderRow).join('');
+          document.getElementById('resultCount').textContent = `Showing ${total} response${total !== 1 ? 's' : ''}`;
+        }
+
+      } catch (err) {
+        document.getElementById('loader').innerHTML = '<p style="color:#f87171;font-size:14px;">Failed to load feedback. Is the server running?</p>';
+      }
+    }
+
+    load();
   </script>
 </body>
 </html>
