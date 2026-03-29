@@ -473,7 +473,7 @@
     document.getElementById('registerSection').classList.toggle('active', tab === 'register');
     document.getElementById('forgotSection').classList.toggle('active', tab === 'forgot');
     // Update heading
-    const headings = { login: ['Welcome <span>Back</span>', 'Sign in to your student account'], register: ['Create <span>Account</span>', 'Register as a new student'], forgot: ['Reset <span>Password</span>', 'We'll email you a reset link'] };
+    const headings = { login: ['Welcome <span>Back</span>', 'Sign in to your student account'], register: ['Create <span>Account</span>', 'Register as a new student'], forgot: ['Reset <span>Password</span>', 'We\'ll email you a reset link'] };
     if (headings[tab]) {
       document.querySelector('.form-heading h2').innerHTML = headings[tab][0];
       document.querySelector('.form-heading p').textContent = headings[tab][1];
