@@ -11,6 +11,7 @@ const MONGO_URI  = process.env.MONGO_URI   || "mongodb://localhost:27017/student
 const JWT_SECRET = process.env.JWT_SECRET  || "change_this_secret_in_production";
 const EMAIL_USER = process.env.EMAIL_USER  || "";   // your Gmail address
 const EMAIL_PASS = process.env.EMAIL_PASS  || "";   // your Gmail App Password
+const APP_URL    = process.env.APP_URL     || "http://localhost:3000";
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -507,8 +508,180 @@ app.delete("/feedbacks/:id", authMiddleware, adminMiddleware, async (req, res) =
   }
 });
 
+
+// ── Semester Reminder Scheduler ───────────────────────────────────────────────
+//
+// Zetech University semesters (3 months each):
+//   Semester 1: Jan → Mar  (reminder sent: last week of March   → March 24)
+//   Semester 2: Apr → Jun  (reminder sent: last week of June    → June 24)
+//   Semester 3: Jul → Sep  (reminder sent: last week of September → Sep 24)
+//   Semester 4: Oct → Dec  (reminder sent: last week of December → Dec 24)
+//
+// Cron runs at 8:00 AM EAT (UTC+3 = 05:00 UTC) on the 24th of Mar/Jun/Sep/Dec
+
+function getSemesterName(month) {
+  const map = { 2: "Semester 1 (January – March)", 5: "Semester 2 (April – June)", 8: "Semester 3 (July – September)", 11: "Semester 4 (October – December)" };
+  return map[month] || "Current Semester";
+}
+
+function buildReminderEmail(studentName, semesterName, deadline) {
+  return `
+<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<style>
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body { background:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;padding:40px 16px; }
+  .wrap { max-width:580px;margin:0 auto; }
+  .header { background:linear-gradient(135deg,#0a1628,#0d2147);border-radius:16px 16px 0 0;padding:36px 40px;text-align:center; }
+  .header h1 { color:#fff;font-size:24px;font-weight:700;letter-spacing:1px; }
+  .header h1 span { color:#6c8fff; }
+  .header p { color:rgba(255,255,255,0.55);font-size:13px;margin-top:6px; }
+  .body { background:#fff;padding:40px; }
+  .greeting { font-size:21px;font-weight:700;color:#0d2147;margin-bottom:14px; }
+  .greeting span { color:#6c8fff; }
+  .msg { color:#4b5563;font-size:15px;line-height:1.9;margin-bottom:20px; }
+  .highlight {
+    background:linear-gradient(135deg,#f0f4ff,#f5f0ff);
+    border-left:4px solid #6c8fff;
+    border-radius:0 12px 12px 0;
+    padding:18px 22px;margin-bottom:24px;
+    color:#374151;font-size:14px;line-height:1.8;
+  }
+  .highlight strong { color:#0d2147; }
+  .steps { background:#f8faff;border:1px solid #e0e7ff;border-radius:12px;padding:22px;margin-bottom:24px; }
+  .steps h3 { font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#6c8fff;margin-bottom:14px; }
+  .step { display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;font-size:14px;color:#374151; }
+  .step-num { background:#6c8fff;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px; }
+  .cta { text-align:center;margin-bottom:24px; }
+  .cta a { display:inline-block;background:linear-gradient(135deg,#6c8fff,#a78bfa);color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:600; }
+  .deadline { text-align:center;font-size:13px;color:#9ca3af;margin-bottom:20px; }
+  .deadline strong { color:#f87171; }
+  .footer { background:#0a1628;border-radius:0 0 16px 16px;padding:26px 40px;text-align:center; }
+  .footer p { color:rgba(255,255,255,0.38);font-size:12px;line-height:1.8; }
+  .footer a { color:#6c8fff;text-decoration:none; }
+</style></head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>ZETECH <span>UNIVERSITY</span></h1>
+    <p>Student Feedback Portal — Semester Reminder</p>
+  </div>
+  <div class="body">
+    <div class="greeting">Dear <span>${studentName}</span>,</div>
+    <p class="msg">
+      As we approach the end of <strong>${semesterName}</strong>, Zetech University kindly
+      requests you to take a few minutes to share your feedback on your learning experience
+      this semester. Your voice is vital in helping us improve the quality of education we provide.
+    </p>
+    <div class="highlight">
+      📅 <strong>Feedback Deadline:</strong> ${deadline}<br/>
+      Your honest feedback helps our academic teams identify areas for improvement, celebrate success,
+      and ensure every student receives the best possible learning experience.
+    </div>
+    <div class="steps">
+      <h3>How to submit your feedback</h3>
+      <div class="step"><div class="step-num">1</div><span>Visit the Zetech University Feedback Portal</span></div>
+      <div class="step"><div class="step-num">2</div><span>Sign in with your Admission Number and password</span></div>
+      <div class="step"><div class="step-num">3</div><span>Fill in your course name, rating, and comments</span></div>
+      <div class="step"><div class="step-num">4</div><span>Click Submit — it only takes 2 minutes!</span></div>
+    </div>
+    <div class="cta"><a href="${APP_URL}">Submit My Feedback Now</a></div>
+    <div class="deadline">⏰ Deadline: <strong>${deadline}</strong></div>
+    <p style="color:#6b7280;font-size:13px;line-height:1.7;text-align:center;">
+      If you have already submitted your feedback, thank you! You may disregard this reminder.<br/>
+      For support, contact the Student Affairs Office.
+    </p>
+  </div>
+  <div class="footer">
+    <p>&copy; ${new Date().getFullYear()} Zetech University &bull; Student Feedback Portal<br/>
+    <a href="${APP_URL}">student-feedback-system-bymi.onrender.com</a><br/>
+    This is an automated semester reminder. Please do not reply to this email.</p>
+  </div>
+</div>
+</body></html>`;
+}
+
+async function sendSemesterReminders() {
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    console.warn("⚠️  Email not configured — skipping semester reminders.");
+    return;
+  }
+
+  const now          = new Date();
+  const month        = now.getMonth(); // 0-indexed
+  const semesterName = getSemesterName(month);
+  const deadlineDate = new Date(now.getFullYear(), month + 1, 0); // last day of month
+  const deadline     = deadlineDate.toLocaleDateString("en-KE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  console.log(`📅  Running semester reminder job for: ${semesterName}`);
+
+  try {
+    let students;
+    if (isConnected()) {
+      students = await User.find({ role: "student" }).lean();
+    } else {
+      students = inMemoryUsers.filter(u => u.role === "student");
+    }
+
+    if (students.length === 0) {
+      console.log("ℹ️   No students found to notify.");
+      return;
+    }
+
+    console.log(`📧  Sending reminders to ${students.length} student(s)…`);
+
+    let sent = 0, failed = 0;
+    for (const student of students) {
+      try {
+        await new Promise((resolve, reject) => {
+          transporter.sendMail({
+            from:    `"Zetech University" <${EMAIL_USER}>`,
+            to:      student.email,
+            subject: `📚 Semester Feedback Reminder — ${semesterName} | Zetech University`,
+            html:    buildReminderEmail(student.name, semesterName, deadline)
+          }, (err, info) => {
+            if (err) { console.error(`❌  Failed to send to ${student.email}:`, err.message); failed++; reject(err); }
+            else     { console.log(`✅  Reminder sent to ${student.email}`); sent++; resolve(info); }
+          });
+        });
+        // Small delay between emails to avoid Gmail rate limits
+        await new Promise(r => setTimeout(r, 500));
+      } catch { /* continue with next student */ }
+    }
+
+    console.log(`📊  Reminder summary: ${sent} sent, ${failed} failed out of ${students.length} students.`);
+  } catch (err) {
+    console.error("❌  Semester reminder job error:", err.message);
+  }
+}
+
+// ── Schedule: 8:00 AM EAT (05:00 UTC) on 24th of March, June, September, December
+// Cron: minute hour day month weekday
+cron.schedule("0 5 24 3,6,9,12 *", () => {
+  console.log("⏰  Semester reminder cron triggered!");
+  sendSemesterReminders();
+}, { timezone: "Africa/Nairobi" });
+
+console.log("📅  Semester reminder scheduler active — runs on 24th of Mar/Jun/Sep/Dec at 8:00 AM EAT");
+
+// ── Admin: Manual trigger endpoint (for testing) ──────────────────────────────
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", db: isConnected() ? "mongodb" : "in-memory", email: EMAIL_USER ? "configured" : "not configured", uptime: process.uptime() });
+  const now = new Date();
+  const month = now.getMonth();
+  const semesters = { 2: "Semester 1 (Jan-Mar)", 5: "Semester 2 (Apr-Jun)", 8: "Semester 3 (Jul-Sep)", 11: "Semester 4 (Oct-Dec)" };
+  res.json({
+    status: "ok",
+    db: isConnected() ? "mongodb" : "in-memory",
+    email: EMAIL_USER ? "configured" : "not configured",
+    currentSemester: semesters[month] || "Between semesters",
+    nextReminderDates: "24th of March, June, September, December at 8:00 AM EAT",
+    uptime: process.uptime()
+  });
+});
+
+// Manual trigger — admin only (for testing)
+app.post("/admin/send-reminders", authMiddleware, adminMiddleware, async (req, res) => {
+  res.json({ message: "Reminder job started. Check server logs for progress." });
+  sendSemesterReminders();
 });
 
 app.get("/",           (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
