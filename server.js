@@ -791,10 +791,74 @@ app.post("/admin/send-reminders", authMiddleware, adminMiddleware, async (req, r
   sendSemesterReminders();
 });
 
+
+// ── Profile Routes ────────────────────────────────────────────────────────────
+
+// Update phone number
+app.put("/profile/phone", authMiddleware, async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ message: "Phone number is required." });
+
+  try {
+    let user;
+    if (isConnected()) {
+      user = await User.findByIdAndUpdate(req.user.id, { phone: phone.trim() }, { new: true }).lean();
+    } else {
+      user = inMemoryUsers.find(u => u._id === req.user.id);
+      if (user) user.phone = phone.trim();
+    }
+
+    // Issue a new token with updated phone so SMS works immediately
+    const newToken = jwt.sign(
+      { id: req.user.id, name: req.user.name, admissionNumber: req.user.admissionNumber, email: req.user.email, phone: phone.trim(), role: req.user.role },
+      JWT_SECRET, { expiresIn: "7d" }
+    );
+
+    res.json({ success: true, message: "Phone number updated.", token: newToken, phone: phone.trim() });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Could not update phone number." });
+  }
+});
+
+// Update password
+app.put("/profile/password", authMiddleware, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword)
+    return res.status(400).json({ message: "Both current and new password are required." });
+  if (newPassword.length < 6)
+    return res.status(400).json({ message: "New password must be at least 6 characters." });
+
+  try {
+    let user;
+    if (isConnected()) {
+      user = await User.findById(req.user.id);
+    } else {
+      user = inMemoryUsers.find(u => u._id === req.user.id);
+    }
+
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) return res.status(401).json({ message: "Current password is incorrect." });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    if (isConnected()) {
+      await User.findByIdAndUpdate(req.user.id, { password: hashed });
+    } else {
+      user.password = hashed;
+    }
+    res.json({ success: true, message: "Password updated successfully." });
+  } catch (err) {
+    res.status(500).json({ message: "Could not update password." });
+  }
+});
+
 app.get("/",           (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.get("/view.html",  (req, res) => res.sendFile(path.join(__dirname, "public", "view.html")));
 app.get("/login.html",          (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 app.get("/reset-password.html", (req, res) => res.sendFile(path.join(__dirname, "public", "reset-password.html")));
+app.get("/profile.html",        (req, res) => res.sendFile(path.join(__dirname, "public", "profile.html")));
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
 app.listen(PORT, () => console.log(`🚀  Server running at http://localhost:${PORT}`));

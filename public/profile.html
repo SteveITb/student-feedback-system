@@ -301,9 +301,10 @@
         const data = await res.json();
         if (!res.ok) return showAlert(data.message || "Failed to update.");
 
-        // Update local storage
-        user.phone = phone;
+        // Update local storage with new token and phone
+        user.phone = data.phone || phone;
         localStorage.setItem("user", JSON.stringify(user));
+        if (data.token) localStorage.setItem("token", data.token);
         document.getElementById("smsBadge").className   = "sms-badge";
         document.getElementById("smsBadge").textContent = "✅ " + phone;
         showAlert("Phone number saved! You will now receive SMS notifications.", "success");
