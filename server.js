@@ -90,26 +90,34 @@ async function sendSMS(phone, message) {
   }
   if (!phone) return;
 
-  // Normalize phone: ensure it starts with +
-  const normalized = phone.startsWith("+") ? phone : "+" + phone.replace(/^0/, "254");
+  // Normalize phone: ensure it starts with +254
+  let normalized = phone.trim();
+  if (normalized.startsWith("0")) normalized = "+254" + normalized.slice(1);
+  else if (!normalized.startsWith("+")) normalized = "+" + normalized;
+
+  // Use sandbox or live endpoint based on username
+  const isSandbox = AT_USERNAME === "sandbox";
+  const hostname  = isSandbox ? "api.sandbox.africastalking.com" : "api.africastalking.com";
+  const path      = "/version1/messaging/bulk";
+
+  const body = JSON.stringify({
+    username:     AT_USERNAME,
+    message:      message,
+    phoneNumbers: [normalized],
+    ...(AT_SENDER ? { senderId: AT_SENDER } : {})
+  });
 
   try {
-    const params = new URLSearchParams({
-      username: AT_USERNAME,
-      to:       normalized,
-      message:  message,
-      ...(AT_SENDER ? { from: AT_SENDER } : {})
-    });
-
     const https = require("https");
     const options = {
-      hostname: "api.africastalking.com",
-      path: "/version1/messaging",
-      method: "POST",
+      hostname,
+      path,
+      method:  "POST",
       headers: {
-        "apiKey":       AT_API_KEY,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept":       "application/json"
+        "apiKey":         AT_API_KEY,
+        "Content-Type":   "application/json",
+        "Accept":         "application/json",
+        "Content-Length": Buffer.byteLength(body)
       }
     };
 
@@ -118,15 +126,17 @@ async function sendSMS(phone, message) {
         let data = "";
         res.on("data", chunk => data += chunk);
         res.on("end", () => {
-          console.log("📱  SMS sent to:", normalized, "| Response:", data.slice(0, 100));
-          resolve(data);
+          const parsed = JSON.parse(data);
+          const status = parsed?.SMSMessageData?.Recipients?.[0]?.status || "unknown";
+          console.log("📱  SMS to:", normalized, "| Status:", status);
+          resolve(parsed);
         });
       });
       req.on("error", err => {
         console.error("❌  SMS error:", err.message);
         reject(err);
       });
-      req.write(params.toString());
+      req.write(body);
       req.end();
     });
   } catch (err) {
