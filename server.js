@@ -30,7 +30,9 @@ const userSchema = new mongoose.Schema({
   admissionNumber: { type: String, required: true, unique: true, trim: true, uppercase: true },
   email:           { type: String, required: true, unique: true, lowercase: true, trim: true },
   password:        { type: String, required: true },
-  role:            { type: String, enum: ["student", "admin"], default: "student" }
+  role:            { type: String, enum: ["student", "admin"], default: "student" },
+  resetToken:      { type: String },
+  resetTokenExpiry: { type: Date }
 }, { timestamps: true });
 
 const feedbackSchema = new mongoose.Schema({
@@ -331,6 +333,117 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+
+// Forgot Password
+app.post("/auth/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: "Email is required." });
+
+  try {
+    let user;
+    if (isConnected()) {
+      user = await User.findOne({ email: email.toLowerCase() });
+    } else {
+      user = inMemoryUsers.find(u => u.email === email.toLowerCase());
+    }
+
+    // Always respond OK to prevent email enumeration
+    if (!user) return res.json({ message: "If this email is registered, a reset link has been sent." });
+
+    // Generate secure token
+    const token  = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    if (isConnected()) {
+      await User.findByIdAndUpdate(user._id, { resetToken: token, resetTokenExpiry: expiry });
+    } else {
+      user.resetToken = token;
+      user.resetTokenExpiry = expiry;
+    }
+
+    const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
+    const resetLink = `${APP_URL}/reset-password.html?token=${token}`;
+
+    const html = `
+<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<style>
+  body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 40px 16px; }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  .header { background: linear-gradient(135deg,#0a1628,#0d2147); border-radius: 16px 16px 0 0; padding: 32px 40px; text-align: center; }
+  .header h1 { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .header h1 span { color: #6c8fff; }
+  .body { background: #fff; padding: 36px 40px; }
+  .body h2 { color: #0d2147; font-size: 20px; margin-bottom: 14px; }
+  .body p { color: #4b5563; font-size: 15px; line-height: 1.8; margin-bottom: 16px; }
+  .btn { display: inline-block; background: linear-gradient(135deg,#6c8fff,#a78bfa); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; margin: 8px 0 20px; }
+  .note { font-size: 12px; color: #9ca3af; line-height: 1.7; }
+  .footer { background: #0a1628; border-radius: 0 0 16px 16px; padding: 24px 40px; text-align: center; }
+  .footer p { color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.8; }
+</style></head>
+<body>
+  <div class="wrap">
+    <div class="header"><h1>ZETECH <span>UNIVERSITY</span></h1></div>
+    <div class="body">
+      <h2>Password Reset Request</h2>
+      <p>Hi ${user.name},</p>
+      <p>We received a request to reset the password for your Zetech University Student Feedback Portal account. Click the button below to set a new password:</p>
+      <div style="text-align:center"><a href="${resetLink}" class="btn">Reset My Password</a></div>
+      <p class="note">⏰ This link expires in <strong>1 hour</strong>. If you did not request a password reset, please ignore this email — your account remains secure.<br/><br/>If the button doesn't work, copy and paste this link into your browser:<br/><a href="${resetLink}" style="color:#6c8fff;word-break:break-all">${resetLink}</a></p>
+    </div>
+    <div class="footer"><p>&copy; ${new Date().getFullYear()} Zetech University &bull; Student Feedback Portal<br/>This is an automated message — please do not reply.</p></div>
+  </div>
+</body></html>`;
+
+    transporter.sendMail({
+      from:    `"Zetech University" <${EMAIL_USER}>`,
+      to:      user.email,
+      subject: "🔐 Reset Your Password — Zetech University Feedback Portal",
+      html
+    }, (err, info) => {
+      if (err) console.error("❌  Reset email error:", err.message);
+      else     console.log("📧  Reset email sent to:", user.email);
+    });
+
+    res.json({ message: "If this email is registered, a reset link has been sent." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Could not process request." });
+  }
+});
+
+// Reset Password
+app.post("/auth/reset-password", async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) return res.status(400).json({ message: "Token and new password are required." });
+  if (newPassword.length < 6)  return res.status(400).json({ message: "Password must be at least 6 characters." });
+
+  try {
+    let user;
+    if (isConnected()) {
+      user = await User.findOne({ resetToken: token, resetTokenExpiry: { $gt: new Date() } });
+    } else {
+      user = inMemoryUsers.find(u => u.resetToken === token && u.resetTokenExpiry > new Date());
+    }
+
+    if (!user) return res.status(410).json({ message: "Reset link is invalid or has expired." });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    if (isConnected()) {
+      await User.findByIdAndUpdate(user._id, { password: hashed, resetToken: null, resetTokenExpiry: null });
+    } else {
+      user.password = hashed;
+      user.resetToken = null;
+      user.resetTokenExpiry = null;
+    }
+
+    res.json({ message: "Password reset successfully." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Could not reset password." });
+  }
+});
+
 // ── Feedback Routes ───────────────────────────────────────────────────────────
 app.post("/submit", authMiddleware, async (req, res) => {
   const { name, course, rating, comments, submittedAt } = req.body;
@@ -400,7 +513,8 @@ app.get("/health", (req, res) => {
 
 app.get("/",           (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.get("/view.html",  (req, res) => res.sendFile(path.join(__dirname, "public", "view.html")));
-app.get("/login.html", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+app.get("/login.html",          (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+app.get("/reset-password.html", (req, res) => res.sendFile(path.join(__dirname, "public", "reset-password.html")));
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
 app.listen(PORT, () => console.log(`🚀  Server running at http://localhost:${PORT}`));

@@ -409,6 +409,25 @@
           <span class="btn-text">Sign In</span>
           <span class="spinner"></span>
         </button>
+        <div style="text-align:center;margin-top:14px;">
+          <a href="#" onclick="switchTab('forgot');return false;" style="font-size:13px;color:var(--accent);text-decoration:none;opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">Forgot your password?</a>
+        </div>
+      </div>
+
+      <!-- FORGOT PASSWORD -->
+      <div id="forgotSection" class="form-section">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7;">Enter your registered email address and we'll send you a link to reset your password.</p>
+        <div class="field">
+          <label for="forgotEmail">Email Address</label>
+          <input type="email" id="forgotEmail" placeholder="you@example.com"/>
+        </div>
+        <button class="btn" id="forgotBtn" onclick="handleForgot()">
+          <span class="btn-text">Send Reset Link</span>
+          <span class="spinner"></span>
+        </button>
+        <div style="text-align:center;margin-top:14px;">
+          <a href="#" onclick="switchTab('login');return false;" style="font-size:13px;color:var(--accent);text-decoration:none;opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">← Back to Sign In</a>
+        </div>
       </div>
 
       <!-- REGISTER -->
@@ -452,7 +471,32 @@
     });
     document.getElementById('loginSection').classList.toggle('active', tab === 'login');
     document.getElementById('registerSection').classList.toggle('active', tab === 'register');
+    document.getElementById('forgotSection').classList.toggle('active', tab === 'forgot');
+    // Update heading
+    const headings = { login: ['Welcome <span>Back</span>', 'Sign in to your student account'], register: ['Create <span>Account</span>', 'Register as a new student'], forgot: ['Reset <span>Password</span>', 'We'll email you a reset link'] };
+    if (headings[tab]) {
+      document.querySelector('.form-heading h2').innerHTML = headings[tab][0];
+      document.querySelector('.form-heading p').textContent = headings[tab][1];
+    }
     hideAlert();
+  }
+
+  async function handleForgot() {
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) return showAlert('Please enter your email address.');
+    setLoading('forgotBtn', true); hideAlert();
+    try {
+      const res  = await fetch('/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) return showAlert(data.message || 'Request failed.');
+      showAlert('Reset link sent! Check your email inbox and spam folder.', 'success');
+      document.getElementById('forgotEmail').value = '';
+    } catch { showAlert('Network error. Please try again.'); }
+    finally  { setLoading('forgotBtn', false); }
   }
 
   function showAlert(msg, type = 'error') {
