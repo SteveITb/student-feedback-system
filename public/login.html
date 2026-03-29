@@ -329,6 +329,13 @@
         </div>
       </div>
       <div class="field">
+        <label>Phone Number</label>
+        <div class="input-wrap">
+          <span class="icon">📱</span>
+          <input type="tel" id="regPhone" placeholder="e.g. +254712345678"/>
+        </div>
+      </div>
+      <div class="field">
         <label>Password</label>
         <div class="input-wrap">
           <span class="icon">🔒</span>
@@ -419,16 +426,17 @@
       const name      = document.getElementById("regName").value.trim();
       const admission = document.getElementById("regAdmission").value.trim();
       const email     = document.getElementById("regEmail").value.trim();
+      const phone     = document.getElementById("regPhone").value.trim();
       const password  = document.getElementById("regPassword").value;
       const confirm   = document.getElementById("regConfirm").value;
-      if (!name || !admission || !email || !password || !confirm) return showAlert("Please fill in all fields.");
+      if (!name || !admission || !email || !phone || !password || !confirm) return showAlert("Please fill in all fields.");
       if (password.length < 6) return showAlert("Password must be at least 6 characters.");
       if (password !== confirm) return showAlert("Passwords do not match.");
       setLoading("registerBtn", true); hideAlert();
       try {
         const res  = await fetch("/auth/register", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, admissionNumber: admission, email, password })
+          body: JSON.stringify({ name, admissionNumber: admission, email, phone, password })
         });
         const data = await res.json();
         if (!res.ok) return showAlert(data.message || "Registration failed.");

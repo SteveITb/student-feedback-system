@@ -13,10 +13,32 @@ const JWT_SECRET = process.env.JWT_SECRET  || "change_this_secret_in_production"
 const EMAIL_USER = process.env.EMAIL_USER  || "";   // your Gmail address
 const EMAIL_PASS = process.env.EMAIL_PASS  || "";   // your Gmail App Password
 const APP_URL    = process.env.APP_URL     || "http://localhost:3000";
+const AT_API_KEY  = process.env.AT_API_KEY  || "";   // Africa's Talking API Key
+const AT_USERNAME = process.env.AT_USERNAME || "";   // Africa's Talking Username
+const AT_SENDER   = process.env.AT_SENDER   || "";   // Africa's Talking Sender ID (optional)
+const MAINTENANCE = process.env.MAINTENANCE  || "false"; // Set to "true" to enable maintenance mode
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ── Maintenance Mode ──────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  if (MAINTENANCE !== "true") return next();
+
+  // Allow admin API routes through (so admin can still access health check)
+  const allowed = ["/health", "/admin/maintenance"];
+  if (allowed.some(p => req.path.startsWith(p))) return next();
+
+  // Serve maintenance page for all HTML requests
+  if (req.method === "GET" && (!req.path.includes(".") || req.path.endsWith(".html"))) {
+    return res.status(503).sendFile(path.join(__dirname, "public", "maintenance.html"));
+  }
+
+  // Return JSON for API calls
+  res.status(503).json({ message: "System under maintenance. Please check back soon." });
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // ── MongoDB ───────────────────────────────────────────────────────────────────
@@ -32,6 +54,7 @@ const userSchema = new mongoose.Schema({
   admissionNumber: { type: String, required: true, unique: true, trim: true, uppercase: true },
   email:           { type: String, required: true, unique: true, lowercase: true, trim: true },
   password:        { type: String, required: true },
+  phone:           { type: String, trim: true, default: "" },
   role:            { type: String, enum: ["student", "admin"], default: "student" },
   resetToken:      { type: String },
   resetTokenExpiry: { type: Date }
@@ -57,6 +80,59 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: { user: EMAIL_USER, pass: EMAIL_PASS }
 });
+
+
+// ── SMS via Africa's Talking ──────────────────────────────────────────────────
+async function sendSMS(phone, message) {
+  if (!AT_API_KEY || !AT_USERNAME) {
+    console.warn("⚠️  Africa's Talking not configured — skipping SMS.");
+    return;
+  }
+  if (!phone) return;
+
+  // Normalize phone: ensure it starts with +
+  const normalized = phone.startsWith("+") ? phone : "+" + phone.replace(/^0/, "254");
+
+  try {
+    const params = new URLSearchParams({
+      username: AT_USERNAME,
+      to:       normalized,
+      message:  message,
+      ...(AT_SENDER ? { from: AT_SENDER } : {})
+    });
+
+    const https = require("https");
+    const options = {
+      hostname: "api.africastalking.com",
+      path: "/version1/messaging",
+      method: "POST",
+      headers: {
+        "apiKey":       AT_API_KEY,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept":       "application/json"
+      }
+    };
+
+    await new Promise((resolve, reject) => {
+      const req = https.request(options, res => {
+        let data = "";
+        res.on("data", chunk => data += chunk);
+        res.on("end", () => {
+          console.log("📱  SMS sent to:", normalized, "| Response:", data.slice(0, 100));
+          resolve(data);
+        });
+      });
+      req.on("error", err => {
+        console.error("❌  SMS error:", err.message);
+        reject(err);
+      });
+      req.write(params.toString());
+      req.end();
+    });
+  } catch (err) {
+    console.error("❌  SMS send failed:", err.message);
+  }
+}
 
 function getRatingLabel(rating) {
   const map = { "5": "Excellent ★★★★★", "4": "Good ★★★★", "3": "Average ★★★", "2": "Poor ★★", "1": "Very Poor ★" };
@@ -293,13 +369,13 @@ app.post("/auth/register", async (req, res) => {
         return res.status(409).json({ message: "Admission number already registered." });
       if (await User.findOne({ email: email.toLowerCase() }))
         return res.status(409).json({ message: "Email already registered." });
-      user = await User.create({ name, admissionNumber: admissionNumber.toUpperCase(), email, password: hashed });
+      user = await User.create({ name, admissionNumber: admissionNumber.toUpperCase(), email, phone: req.body.phone || "", password: hashed });
     } else {
       if (inMemoryUsers.find(u => u.admissionNumber === admissionNumber.toUpperCase()))
         return res.status(409).json({ message: "Admission number already registered." });
       if (inMemoryUsers.find(u => u.email === email.toLowerCase()))
         return res.status(409).json({ message: "Email already registered." });
-      user = { _id: Date.now().toString(), name, admissionNumber: admissionNumber.toUpperCase(), email: email.toLowerCase(), password: hashed, role: "student" };
+      user = { _id: Date.now().toString(), name, admissionNumber: admissionNumber.toUpperCase(), email: email.toLowerCase(), phone: req.body.phone || "", password: hashed, role: "student" };
       inMemoryUsers.push(user);
     }
     const token = jwt.sign(
@@ -325,10 +401,10 @@ app.post("/auth/login", async (req, res) => {
     if (!await bcrypt.compare(password, user.password))
       return res.status(401).json({ message: "Invalid admission number or password." });
     const token = jwt.sign(
-      { id: user._id, name: user.name, admissionNumber: user.admissionNumber, email: user.email, role: user.role },
+      { id: user._id, name: user.name, admissionNumber: user.admissionNumber, email: user.email, phone: user.phone || "", role: user.role },
       JWT_SECRET, { expiresIn: "7d" }
     );
-    res.json({ token, user: { id: user._id, name: user.name, admissionNumber: user.admissionNumber, email: user.email, role: user.role } });
+    res.json({ token, user: { id: user._id, name: user.name, admissionNumber: user.admissionNumber, email: user.email, phone: user.phone || "", role: user.role } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Login failed." });
@@ -462,7 +538,7 @@ app.post("/submit", authMiddleware, async (req, res) => {
   try {
     if (isConnected()) {
       const doc = await Feedback.create(payload);
-      // Send confirmation email using the email stored in JWT
+      // Send confirmation email
       sendFeedbackConfirmation({
         toName:   req.user.name,
         toEmail:  req.user.email,
@@ -470,6 +546,11 @@ app.post("/submit", authMiddleware, async (req, res) => {
         rating:   payload.rating,
         comments: payload.comments
       });
+      // Send SMS confirmation
+      if (req.user.phone) {
+        const smsMsg = "Dear " + req.user.name + ", your feedback for " + payload.course + " has been received by Zetech University. Thank you! - Zetech University Feedback Portal";
+        sendSMS(req.user.phone, smsMsg);
+      }
       return res.status(201).json({ success: true, id: doc._id });
     }
     payload._id = Date.now().toString();
@@ -633,6 +714,12 @@ async function sendSemesterReminders() {
     let sent = 0, failed = 0;
     for (const student of students) {
       try {
+        // Send SMS reminder
+        if (student.phone) {
+          const smsMsg = "Dear " + student.name + ", please submit your " + semesterName + " feedback at Zetech University Feedback Portal before " + deadline + ". Visit: " + APP_URL;
+          sendSMS(student.phone, smsMsg);
+        }
+
         await new Promise((resolve, reject) => {
           transporter.sendMail({
             from:    `"Zetech University" <${EMAIL_USER}>`,
@@ -675,8 +762,17 @@ app.get("/health", (req, res) => {
     email: EMAIL_USER ? "configured" : "not configured",
     currentSemester: semesters[month] || "Between semesters",
     nextReminderDates: "24th of March, June, September, December at 8:00 AM EAT",
+    maintenance: MAINTENANCE === "true",
     uptime: process.uptime()
   });
+});
+
+// Toggle maintenance mode (admin only)
+app.post("/admin/maintenance", authMiddleware, adminMiddleware, (req, res) => {
+  const { enable } = req.body;
+  process.env.MAINTENANCE = enable ? "true" : "false";
+  console.log(enable ? "🔧  Maintenance mode ENABLED" : "✅  Maintenance mode DISABLED");
+  res.json({ maintenance: enable, message: enable ? "Maintenance mode enabled." : "Maintenance mode disabled." });
 });
 
 // Manual trigger — admin only (for testing)
