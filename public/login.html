@@ -50,18 +50,14 @@
     body {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      min-height: 100vh; padding: 20px;
+      min-height: 100vh; padding: 24px 20px;
       position: relative;
     }
 
-    /* Top bar */
+    /* Top bar — now inside card, not fixed */
     .topbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 20;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 18px 40px;
-      background: rgba(5,10,25,0.5);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
     }
 
     .uni-brand { display: flex; align-items: center; gap: 12px; }
@@ -102,7 +98,7 @@
       padding: 40px 44px;
       box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
       animation: cardIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both;
-      margin-top: 60px;
+      margin-top: 0;
     }
     @keyframes cardIn {
       from { opacity:0; transform: translateY(32px) scale(0.97); }
@@ -243,8 +239,8 @@
     .card-footer strong { color: rgba(255,255,255,0.5); }
 
     @media (max-width: 500px) {
-      .card { padding: 32px 24px; margin-top: 70px; }
-      .topbar { padding: 14px 20px; }
+      .card { padding: 32px 24px; margin-top: 0; }
+
       .card-title { font-size: 28px; }
     }
   </style>
