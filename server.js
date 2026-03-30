@@ -126,10 +126,30 @@ async function sendSMS(phone, message) {
         let data = "";
         res.on("data", chunk => data += chunk);
         res.on("end", () => {
-          const parsed = JSON.parse(data);
-          const status = parsed?.SMSMessageData?.Recipients?.[0]?.status || "unknown";
-          console.log("📱  SMS to:", normalized, "| Status:", status);
-          resolve(parsed);
+          // Check if response is JSON before parsing
+          const trimmed = data.trim();
+          if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              const recipients = parsed?.SMSMessageData?.Recipients || [];
+              if (recipients.length > 0) {
+                const status = recipients[0]?.status || "unknown";
+                const cost   = recipients[0]?.cost   || "N/A";
+                console.log("📱  SMS to:", normalized, "| Status:", status, "| Cost:", cost);
+              } else {
+                console.log("📱  SMS response:", trimmed.slice(0, 200));
+              }
+              resolve(parsed);
+            } catch (e) {
+              console.error("📱  SMS JSON parse error:", e.message, "| Raw:", trimmed.slice(0, 100));
+              resolve(trimmed);
+            }
+          } else {
+            // Plain text error response from Africa's Talking
+            console.error("❌  SMS API error:", trimmed.slice(0, 200));
+            console.error("    Check AT_API_KEY and AT_USERNAME in Render environment variables.");
+            resolve(trimmed);
+          }
         });
       });
       req.on("error", err => {
@@ -802,7 +822,7 @@ app.put("/profile/phone", authMiddleware, async (req, res) => {
   try {
     let user;
     if (isConnected()) {
-      user = await User.findByIdAndUpdate(req.user.id, { phone: phone.trim() }, { new: true }).lean();
+      user = await User.findByIdAndUpdate(req.user.id, { phone: phone.trim() }, { returnDocument: "after" }).lean();
     } else {
       user = inMemoryUsers.find(u => u._id === req.user.id);
       if (user) user.phone = phone.trim();
