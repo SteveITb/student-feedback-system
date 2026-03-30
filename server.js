@@ -623,17 +623,19 @@ app.delete("/feedbacks/:id", authMiddleware, adminMiddleware, async (req, res) =
 
 // ── Semester Reminder Scheduler ───────────────────────────────────────────────
 //
-// Zetech University semesters (3 months each):
-//   Semester 1: Jan → Mar  (reminder sent: last week of March   → March 24)
-//   Semester 2: Apr → Jun  (reminder sent: last week of June    → June 24)
-//   Semester 3: Jul → Sep  (reminder sent: last week of September → Sep 24)
-//   Semester 4: Oct → Dec  (reminder sent: last week of December → Dec 24)
+// Zetech University semesters (4 months each):
+//   Semester 1: Jan → Apr  (reminder sent: last week of April   → April 24)
+//   Semester 2: May → Aug  (reminder sent: last week of August  → August 24)
+//   Semester 3: Sep → Dec  (reminder sent: last week of December → Dec 24)
 //
-// Cron runs at 8:00 AM EAT (UTC+3 = 05:00 UTC) on the 24th of Mar/Jun/Sep/Dec
+// Cron runs at 8:00 AM EAT (UTC+3 = 05:00 UTC) on the 24th of Apr/Aug/Dec
 
 function getSemesterName(month) {
-  const map = { 2: "Semester 1 (January – March)", 5: "Semester 2 (April – June)", 8: "Semester 3 (July – September)", 11: "Semester 4 (October – December)" };
-  return map[month] || "Current Semester";
+  // 4-month semesters: Jan-Apr, May-Aug, Sep-Dec
+  if (month >= 0 && month <= 3)  return "Semester 1 (January – April)";
+  if (month >= 4 && month <= 7)  return "Semester 2 (May – August)";
+  if (month >= 8 && month <= 11) return "Semester 3 (September – December)";
+  return "Current Semester";
 }
 
 function buildReminderEmail(studentName, semesterName, deadline) {
@@ -772,26 +774,26 @@ async function sendSemesterReminders() {
   }
 }
 
-// ── Schedule: 8:00 AM EAT (05:00 UTC) on 24th of March, June, September, December
+// ── Schedule: 8:00 AM EAT (05:00 UTC) on 24th of April, August, December
 // Cron: minute hour day month weekday
-cron.schedule("0 5 24 3,6,9,12 *", () => {
+cron.schedule("0 5 24 4,8,12 *", () => {
   console.log("⏰  Semester reminder cron triggered!");
   sendSemesterReminders();
 }, { timezone: "Africa/Nairobi" });
 
-console.log("📅  Semester reminder scheduler active — runs on 24th of Mar/Jun/Sep/Dec at 8:00 AM EAT");
+console.log("📅  Semester reminder scheduler active — runs on 24th of Apr/Aug/Dec at 8:00 AM EAT");
 
 // ── Admin: Manual trigger endpoint (for testing) ──────────────────────────────
 app.get("/health", (req, res) => {
   const now = new Date();
   const month = now.getMonth();
-  const semesters = { 2: "Semester 1 (Jan-Mar)", 5: "Semester 2 (Apr-Jun)", 8: "Semester 3 (Jul-Sep)", 11: "Semester 4 (Oct-Dec)" };
+  const sem = month <= 3 ? "Semester 1 (Jan-Apr)" : month <= 7 ? "Semester 2 (May-Aug)" : "Semester 3 (Sep-Dec)";
   res.json({
     status: "ok",
     db: isConnected() ? "mongodb" : "in-memory",
     email: EMAIL_USER ? "configured" : "not configured",
-    currentSemester: semesters[month] || "Between semesters",
-    nextReminderDates: "24th of March, June, September, December at 8:00 AM EAT",
+    currentSemester: sem,
+    nextReminderDates: "24th of April, August, December at 8:00 AM EAT",
     maintenance: MAINTENANCE === "true",
     uptime: process.uptime()
   });
@@ -811,6 +813,19 @@ app.post("/admin/send-reminders", authMiddleware, adminMiddleware, async (req, r
   sendSemesterReminders();
 });
 
+
+// ── Admin Students Route ─────────────────────────────────────────────────────
+app.get("/admin/students", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    if (isConnected()) {
+      const students = await User.find().select("-password -resetToken -resetTokenExpiry").sort({ createdAt: -1 }).lean();
+      return res.json(students);
+    }
+    return res.json(inMemoryUsers.map(u => ({ ...u, password: undefined })));
+  } catch (err) {
+    res.status(500).json({ message: "Could not retrieve students." });
+  }
+});
 
 // ── Profile Routes ────────────────────────────────────────────────────────────
 
@@ -875,6 +890,7 @@ app.put("/profile/password", authMiddleware, async (req, res) => {
 });
 
 app.get("/",           (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+app.get("/admin.html", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
 app.get("/view.html",  (req, res) => res.sendFile(path.join(__dirname, "public", "view.html")));
 app.get("/login.html",          (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 app.get("/reset-password.html", (req, res) => res.sendFile(path.join(__dirname, "public", "reset-password.html")));
