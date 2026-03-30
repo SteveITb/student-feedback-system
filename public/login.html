@@ -376,6 +376,17 @@
   <script>
     if (localStorage.getItem("token")) window.location.href = "/";
 
+    // Show logout reason if redirected
+    const logoutReason = sessionStorage.getItem("logoutReason");
+    if (logoutReason) {
+      const el = document.getElementById("logoutMsg");
+      if (el) {
+        el.textContent = logoutReason;
+        el.style.display = "block";
+      }
+      sessionStorage.removeItem("logoutReason");
+    }
+
     function switchTab(tab) {
       document.querySelectorAll(".tab").forEach((t, i) => {
         t.classList.toggle("active", (i===0 && tab==="login") || (i===1 && tab==="register"));
