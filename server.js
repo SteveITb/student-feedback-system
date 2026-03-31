@@ -16,7 +16,8 @@ const APP_URL    = process.env.APP_URL     || "http://localhost:3000";
 const AT_API_KEY  = process.env.AT_API_KEY  || "";   // Africa's Talking API Key
 const AT_USERNAME = process.env.AT_USERNAME || "";   // Africa's Talking Username
 const AT_SENDER   = process.env.AT_SENDER   || "";   // Africa's Talking Sender ID (optional)
-const MAINTENANCE = process.env.MAINTENANCE  || "false"; // Set to "true" to enable maintenance mode
+// Maintenance mode — stored in memory, toggled via API
+let maintenanceMode = (process.env.MAINTENANCE || "false") === "true";
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -24,13 +25,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Maintenance Mode ──────────────────────────────────────────────────────────
 app.use((req, res, next) => {
-  if (MAINTENANCE !== "true") return next();
+  if (!maintenanceMode) return next();
 
-  // Allow admin API routes through (so admin can still access health check)
-  const allowed = ["/health", "/admin/maintenance"];
+  // Always allow: admin login, admin dashboard, maintenance toggle, health check
+  const allowed = ["/health", "/admin/maintenance", "/admin.html", "/admin-login.html", "/auth/admin-login"];
   if (allowed.some(p => req.path.startsWith(p))) return next();
 
-  // Serve maintenance page for all HTML requests
+  // Serve maintenance page for HTML requests
   if (req.method === "GET" && (!req.path.includes(".") || req.path.endsWith(".html"))) {
     return res.status(503).sendFile(path.join(__dirname, "public", "maintenance.html"));
   }
@@ -552,6 +553,37 @@ app.post("/auth/reset-password", async (req, res) => {
   }
 });
 
+
+// ── Admin Login (email + password) ───────────────────────────────────────────
+app.post("/auth/admin-login", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password)
+    return res.status(400).json({ message: "Email and password are required." });
+
+  try {
+    let user;
+    if (isConnected()) {
+      user = await User.findOne({ email: email.toLowerCase(), role: "admin" }).lean();
+    } else {
+      user = inMemoryUsers.find(u => u.email === email.toLowerCase() && u.role === "admin");
+    }
+
+    if (!user) return res.status(401).json({ message: "Invalid email or password." });
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ message: "Invalid email or password." });
+
+    const token = jwt.sign(
+      { id: user._id, name: user.name, admissionNumber: user.admissionNumber, email: user.email, phone: user.phone || "", role: user.role },
+      JWT_SECRET, { expiresIn: "7d" }
+    );
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Login failed." });
+  }
+});
+
 // ── Feedback Routes ───────────────────────────────────────────────────────────
 app.post("/submit", authMiddleware, async (req, res) => {
   const { name, course, rating, comments, submittedAt } = req.body;
@@ -794,7 +826,7 @@ app.get("/health", (req, res) => {
     email: EMAIL_USER ? "configured" : "not configured",
     currentSemester: sem,
     nextReminderDates: "24th of April, August, December at 8:00 AM EAT",
-    maintenance: MAINTENANCE === "true",
+    maintenance: maintenanceMode,
     uptime: process.uptime()
   });
 });
@@ -802,9 +834,14 @@ app.get("/health", (req, res) => {
 // Toggle maintenance mode (admin only)
 app.post("/admin/maintenance", authMiddleware, adminMiddleware, (req, res) => {
   const { enable } = req.body;
-  process.env.MAINTENANCE = enable ? "true" : "false";
-  console.log(enable ? "🔧  Maintenance mode ENABLED" : "✅  Maintenance mode DISABLED");
-  res.json({ maintenance: enable, message: enable ? "Maintenance mode enabled." : "Maintenance mode disabled." });
+  maintenanceMode = enable === true || enable === "true";
+  console.log(maintenanceMode ? "🔧  Maintenance mode ENABLED" : "✅  Maintenance mode DISABLED");
+  res.json({ maintenance: maintenanceMode, message: maintenanceMode ? "Maintenance mode is now ENABLED." : "Maintenance mode is now DISABLED." });
+});
+
+// Check maintenance status (public)
+app.get("/admin/maintenance-status", (req, res) => {
+  res.json({ maintenance: maintenanceMode });
 });
 
 // Manual trigger — admin only (for testing)
@@ -890,7 +927,8 @@ app.put("/profile/password", authMiddleware, async (req, res) => {
 });
 
 app.get("/",           (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.get("/admin.html", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
+app.get("/admin.html",       (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
+app.get("/admin-login.html", (req, res) => res.sendFile(path.join(__dirname, "public", "admin-login.html")));
 app.get("/view.html",  (req, res) => res.sendFile(path.join(__dirname, "public", "view.html")));
 app.get("/login.html",          (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 app.get("/reset-password.html", (req, res) => res.sendFile(path.join(__dirname, "public", "reset-password.html")));
