@@ -247,7 +247,7 @@
       try {
         const res  = await fetch("/auth/admin-register", {
           method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ name, email, password, secretKey: secret })
+          body: JSON.stringify({ "name": "Steve Ogweno", "email": "stephenBig01@gmail.com", "password": "Gizzel#01", "securepassword": "Gizzel#01", "secretKey": "zetechadmin@2025!" })
         });
         const data = await res.json();
         if (!res.ok) return showAlert(data.message || "Registration failed.");
@@ -288,7 +288,7 @@
       try {
         const res  = await fetch("/auth/admin-login", {
           method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ "email": "stephenBig01@gmail.com", "password": "Gizzel#01" })
         });
         const data = await res.json();
         if (!res.ok) return showAlert(data.message || "Login failed.");
