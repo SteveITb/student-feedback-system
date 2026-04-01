@@ -16,6 +16,8 @@ const APP_URL    = process.env.APP_URL     || "http://localhost:3000";
 const AT_API_KEY  = process.env.AT_API_KEY  || "";   // Africa's Talking API Key
 const AT_USERNAME = process.env.AT_USERNAME || "";   // Africa's Talking Username
 const AT_SENDER   = process.env.AT_SENDER   || "";   // Africa's Talking Sender ID (optional)
+const ADMIN_SECRET = process.env.ADMIN_SECRET || "ZetechAdmin2025"; // Secret key required for admin registration
+
 // Maintenance mode — stored in memory, toggled via API
 let maintenanceMode = (process.env.MAINTENANCE || "false") === "true";
 
@@ -553,6 +555,54 @@ app.post("/auth/reset-password", async (req, res) => {
   }
 });
 
+
+// ── Admin Register (email + password + secret key) ───────────────────────────
+app.post("/auth/admin-register", async (req, res) => {
+  const { name, email, password, secretKey } = req.body;
+  if (!name || !email || !password || !secretKey)
+    return res.status(400).json({ message: "All fields are required." });
+  if (password.length < 8)
+    return res.status(400).json({ message: "Password must be at least 8 characters." });
+  if (secretKey !== ADMIN_SECRET)
+    return res.status(403).json({ message: "Invalid admin secret key. Contact the system administrator." });
+
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+    let user;
+
+    if (isConnected()) {
+      const exists = await User.findOne({ email: email.toLowerCase() });
+      if (exists) return res.status(409).json({ message: "Email already registered." });
+      user = await User.create({
+        name,
+        admissionNumber: "ADMIN-" + Date.now(),
+        email: email.toLowerCase(),
+        password: hashed,
+        role: "admin"
+      });
+    } else {
+      const exists = inMemoryUsers.find(u => u.email === email.toLowerCase());
+      if (exists) return res.status(409).json({ message: "Email already registered." });
+      user = {
+        _id: Date.now().toString(),
+        name, email: email.toLowerCase(),
+        admissionNumber: "ADMIN-" + Date.now(),
+        password: hashed, role: "admin"
+      };
+      inMemoryUsers.push(user);
+    }
+
+    const token = jwt.sign(
+      { id: user._id, name: user.name, email: user.email, role: user.role },
+      JWT_SECRET, { expiresIn: "7d" }
+    );
+    console.log("✅  New admin registered:", email);
+    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Registration failed." });
+  }
+});
 
 // ── Admin Login (email + password) ───────────────────────────────────────────
 app.post("/auth/admin-login", async (req, res) => {
