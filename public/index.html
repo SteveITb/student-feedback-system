@@ -408,7 +408,7 @@
     const user  = JSON.parse(localStorage.getItem("user") || "null");
     if (!token) window.location.href = "/login.html";
     // Redirect admins to admin dashboard
-    if (user && user.role === "admin") window.location.href = "/admin.html";
+    if (user && user.role === "admin") window.location.href = "/view.html";
 
     if (user) {
       const first = (user.name || "Student").split(" ")[0];
